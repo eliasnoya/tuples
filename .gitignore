@@ -1,0 +1,9 @@
+/vendor
+/storage
+/public
+/routes
+/.env
+/.rr.yaml
+/bootstraped.keep
+/rr.exe
+/worker.php

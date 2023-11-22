@@ -1,0 +1,19 @@
+{
+  "autoload": {
+    "psr-4": {
+      "Tuples\\": "src/"
+    },
+    "files": [
+      "src/Helpers.php"
+    ]
+  },
+  "require": {
+    "nyholm/psr7-server": "1.1",
+    "nyholm/psr7": "1.8",
+    "vlucas/phpdotenv": "5.6",
+    "spiral/roadrunner": "2023.3.0",
+    "spiral/roadrunner-cli": "2.5",
+    "spiral/roadrunner-http": "3.2",
+    "monolog/monolog": "3.5"
+  }
+}
