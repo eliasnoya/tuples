@@ -63,14 +63,27 @@ class Response
         /** @var StreamInterface $stream */
         $stream = \Nyholm\Psr7\Stream::create($body);
 
-        if (!$stream instanceof StreamInterface) {
-            throw new \InvalidArgumentException("The streamer Closure doesn't return a StreamInterface-compliant stream.");
-        }
-
         $this->psr = $this->psr->withBody($stream);
         $this->psr = $this->psr->withHeader('Content-Length', $stream->getSize());
 
         return $this;
+    }
+
+    public function matchRequestContent(Request $request, bool $overwrite = false)
+    {
+        $exists = $this->psr()->hasHeader('content-type');
+        if ($overwrite) {
+            $exists = false;
+        }
+
+        if ($request->headerExists('accept') && !$exists) {
+            $accept = $request->header('accept');
+            $accepts = explode(",", $accept[0]);
+
+            if (isset($accepts[0])) {
+                $this->header("Content-type", $accepts[0]);
+            }
+        }
     }
 
     public function isJson(): self
@@ -98,6 +111,11 @@ class Response
         return $this->psr->getBody()->getContents();
     }
 
+    public function redirect(string $to): self
+    {
+        return $this->header("Location", $to)->status("302")->body("");
+    }
+
     /**
      * Write response (only usefull on FPM/CGI implementations)
      *
@@ -105,14 +123,20 @@ class Response
      */
     public function emit()
     {
+        // Send status line
+        header(sprintf(
+            'HTTP/%s %s %s',
+            $this->psr->getProtocolVersion(),
+            $this->psr->getStatusCode(),
+            $this->psr->getReasonPhrase()
+        ), true, $this->psr->getStatusCode());
+
+        // Send headers
         foreach ($this->psr->getHeaders() as $header => $value) {
-            header($header . ":" . implode(',', $value));
+            header($header . ":" . implode(',', $value), false);
         }
 
-        // emit status
-        header("HTTP/1.1 " . $this->psr->getStatusCode() . " " . $this->psr->getReasonPhrase());
-
-        // Emit Body
+        // Send the response body
         echo $this->psr->getBody();
         exit;
     }

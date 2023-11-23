@@ -2,7 +2,7 @@
 
 namespace Tuples\Container;
 
-use Tuples\Container\Contracts\AbstractContainer;
+use Tuples\Container\Contracts\Container as AbstractContainer;
 
 /**
  * An ephemeral container implementation designed to exist within a specific context, such as a request lifecycle.

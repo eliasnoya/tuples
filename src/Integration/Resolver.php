@@ -2,32 +2,29 @@
 
 namespace Tuples\Integration;
 
+use Tuples\Container\Container;
+use Tuples\Exception\HttpNotFoundException;
 use Tuples\Http\Request;
 use Tuples\Http\Response;
-use Tuples\Http\Router;
+use Tuples\Http\Route;
 
 /**
  * Class to resolve the Request LifeCycle
  */
 class Resolver
 {
-    public function __construct(protected Router $router, protected Request $request, protected Response $response)
+    protected Container $container;
+
+    public function __construct(protected Request $request, protected Response $response)
     {
+        $this->container = Container::instance();
     }
 
-    /**
-     * Find route and execute his action
-     *
-     * @throws \Throwable On action failure or not found route
-     * @return Response On Success
-     */
-    public function execute(): Response
+    public function execute(Route|false $route, array $params = []): Response
     {
         try {
-            /** @var \Tuples\Http\Route $route */
-            list($route, $params) = $this->router->lookup($this->request->method(), $this->request->path());
             if (!$route) {
-                throw new \Error("404 not found");
+                throw new HttpNotFoundException;
             }
 
             $this->request->setRoute($route);
@@ -35,14 +32,20 @@ class Resolver
 
             list($controller, $method) = $route->getAction();
 
-            // Register controller on Container as callabale (instance every time its call)
-            container()->callable($controller, $controller);
+            // Register controller on Container as callabale (instance every time it is called)
+            $this->container->callable($controller, $controller);
 
             /************************************************************
             | Define the chain, route action + all middlewares
              ************************************************************/
+
             // Convert the route action to a \Closure; this will be the last command of the chain
             $next = function () use ($controller, $method, $params) {
+
+                // Execute this on the last command of the chain only
+                // If content type is not set yet in the request, match with the client request "Accept" header
+                $this->response->matchRequestContent($this->request);
+
                 return $this->handle($controller, $method, $params);
             };
             // Loop through middlewares in reverse order
@@ -52,8 +55,8 @@ class Resolver
 
                 $middleware = $middlewares[$i];
 
-                // Register middleware on Container as callabale (instance every time its call)
-                container()->callable($middleware, $middleware);
+                // Register middleware on Container as callabale (instance every time it is called)
+                $this->container->callable($middleware, $middleware);
 
                 $next = function () use ($middleware, $next) {
                     return $this->handle($middleware, 'handle', ['next' => $next]);
@@ -61,18 +64,44 @@ class Resolver
             }
 
             // Execute the chain
-            return $next();
-        } catch (\Throwable $th) {
+            $result = $next();
 
-            return $this->response->isJson()->body([
-                'message' => $th->getMessage(),
-                'trace' => $th->getTrace(),
-            ]);
+            // Detect programer error: for example all the lifecycle returns a \Closure
+            if (!$result instanceof Response) {
+                throw new \Error("The request lifecycle doesnt provide a result compatible with \Tuples\Http\Response");
+            }
+
+            return $result;
+        } catch (\Throwable $exception) {
+            /** @var \Tuples\Exception\Contracts\ExceptionHandler $handler */
+            $handler = $this->container->resolve("ExceptionHandler", ["error" => $exception]);
+            return $handler->response();
         }
     }
 
     /**
-     * Execute the chain method and return \Closure or \Tuples\Http\Response (cast result on response object if is needed)
+     * Execute Route Action detecting it from Request
+     *
+     * @return Response
+     */
+    public function resolve(): Response
+    {
+        return $this->resolvePath($this->request->method(), $this->request->path());
+    }
+
+    /**
+     * Execute Route Action detecting it from $method and $path
+     *
+     * @return Response
+     */
+    public function resolvePath(string $method, string $path): Response
+    {
+        list($route, $params) = router()->lookup($method, $path);
+        return $this->execute($route, $params);
+    }
+
+    /**
+     * Execute the chain-action and return \Closure or \Tuples\Http\Response (cast result on response object if is needed)
      *
      * @param string $callback
      * @param string $method
@@ -81,7 +110,7 @@ class Resolver
      */
     private function handle(string $depedency, string $method, array $args): Response|\Closure
     {
-        $value = container()->resolveAndExecute($depedency, $method, $args);
+        $value = $this->container->resolveAndExecute($depedency, $method, $args);
 
         // If it is a \Closure (next() function in the chain)
         // or if it is already a response, return it unmodified

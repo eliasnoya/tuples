@@ -101,9 +101,9 @@ class Route
     /**
      * Get the value of action
      *
-     * @return array|\Closure
+     * @return array
      */
-    public function getAction(): array|\Closure
+    public function getAction(): array
     {
         return $this->action;
     }

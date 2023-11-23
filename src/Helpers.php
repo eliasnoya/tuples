@@ -7,13 +7,14 @@ use Tuples\Http\Request;
 use Tuples\Http\Response;
 use Tuples\Http\Router;
 use Tuples\Integration\App;
+use Tuples\Integration\Resolver;
 
 /**
  * Get container instance
  *
  * @param mixed $abstract
  * @param array $arguments
- * @return mixed
+ * @return Container
  */
 function container(): Container
 {
@@ -122,6 +123,26 @@ function app(string $basePath = "./"): App
     $app->defaults();
 
     return $app;
+}
+
+/**
+ * Perform an internal redirection using the Route resolver without changing the URL or making an HTTP call.
+ * For HTTP location redirects, use response()->redirect(...).
+ * If the destination route contains RouteParams in the $path, provide the values directly (e.g., /user/1, not /user/{id}).
+ * You can pass manual input data to the destination route using the $inputs variable
+ * (remember the inputs sended to the first route will reach the next route to)
+ *
+ * @param string $path
+ * @param string $method
+ * @return Response
+ */
+function routeTo(string $path, string $method = "GET", array $inputs = []): Response
+{
+    request()->inputs()->merge($inputs);
+
+    /** @var Resolver $resolver */
+    $resolver = container()->resolve(Resolver::class);
+    return $resolver->resolvePath($method, $path);
 }
 
 function castAsMultidimensional(array $inputArray): array

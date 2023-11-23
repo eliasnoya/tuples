@@ -15,15 +15,13 @@ class RouteGroup
     {
     }
 
-    public static function prefix(string $prefix)
+    public static function prefix(string $prefix): RouteGroup
     {
         return new RouteGroup($prefix);
     }
 
-    public function add(\Closure $callback)
+    public function add(array $routes): RouteGroup
     {
-        $routes = $callback();
-
         if (!is_array($routes) || empty($routes)) {
             throw new \Error("add() callback must return an array of \Tuples\Http\Route instances");
         }
@@ -34,7 +32,7 @@ class RouteGroup
         return $this;
     }
 
-    public function addRoute(Route $route)
+    public function addRoute(Route $route): RouteGroup
     {
         $currentPath = $route->getPath();
         // if path doesnt start with slash / add it as glue between prefix and route path
@@ -51,6 +49,7 @@ class RouteGroup
         }
 
         $this->routes[] = $route;
+        return $this;
     }
 
     /**
@@ -58,7 +57,7 @@ class RouteGroup
      *
      * @return string
      */
-    public function getPrefix()
+    public function getPrefix(): string
     {
         return $this->prefix;
     }

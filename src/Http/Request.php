@@ -5,7 +5,7 @@ namespace Tuples\Http;
 use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
-use Tuples\Container\Contracts\AbstractContainer;
+use Tuples\Container\Contracts\Container as AbstractContainer;
 use Tuples\Container\EphemeralContainer;
 use Tuples\Utils\KeyValue;
 
@@ -24,9 +24,6 @@ class Request
 
     // Server variables parsed as KeyValue object
     private KeyValue $server;
-
-    // Http Headers parsed as KeyValue object (allways the value will be an array like ['Content-Type' => ['application/json']])
-    private KeyValue $headers;
 
     // The current request route if exists
     private Route $route;
@@ -47,9 +44,6 @@ class Request
         // Initialize easy-access QUERYSTRING KeyValue object
         $this->query = new KeyValue($serverRequest->getQueryParams());
 
-        // Initialize easy-access HEADERS KeyValue object
-        $this->wrapHeaders();
-
         // Initialize easy-access SERVER KeyValue object
         $this->server = new KeyValue($serverRequest->getServerParams());
 
@@ -60,10 +54,7 @@ class Request
 
         // \Psr\Http\Message\UploadedFileInterface[]
         $this->files = $serverRequest->getUploadedFiles();
-    }
 
-    public function useEphemeralContainer()
-    {
         $this->container = new EphemeralContainer;
     }
 
@@ -172,10 +163,29 @@ class Request
         return $this->query->get($index, $default);
     }
 
-
-    public function headers(): KeyValue
+    public function inputs(): KeyValue
     {
-        return $this->headers;
+        return $this->inputs;
+    }
+
+    public function headers(): array
+    {
+        return $this->serverRequest->getHeaders();
+    }
+
+    public function expectJson(): bool
+    {
+        return $this->headerIs("accept", 'application/json');
+    }
+
+    public function headerIs(string $header, string $value): bool
+    {
+        foreach ($this->header($header) as $h) {
+            if (strtolower($h) === $value) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -186,7 +196,7 @@ class Request
      */
     public function header(string $header): array
     {
-        return $this->headers->get($header, []);
+        return $this->serverRequest->getHeader($header);
     }
 
     /**
@@ -197,12 +207,7 @@ class Request
      */
     public function headerExists(string $header): bool
     {
-        return $this->headers->exists($header);
-    }
-
-    public function isJson(): bool
-    {
-        return $this->headers->contains('content-type', 'json');
+        return $this->serverRequest->hasHeader($header);
     }
 
     public function setRoute(Route $route)
@@ -223,32 +228,5 @@ class Request
     public function getRouteParams(): KeyValue
     {
         return $this->routeParams;
-    }
-
-    /**
-     * Wrap $this->headers from ServerRequests headers an array ALL lowercase (index and values)
-     *
-     * @return void
-     */
-    private function wrapHeaders(): void
-    {
-        $headersKeyValue = [];
-        $headers = $this->serverRequest->getHeaders();
-        foreach ($headers as $headerKey => $headerValues) {
-
-            $newKey = strtolower($headerKey);
-
-            if (is_array($headerValues)) {
-                $newHeaderValues = array_map(function ($value) {
-                    return strtolower($value);
-                }, $headerValues);
-            } else {
-                $newHeaderValues = strtolower($headerValues);
-            }
-
-            $headersKeyValue[$newKey] = $newHeaderValues;
-        }
-
-        $this->headers = new KeyValue($headersKeyValue);
     }
 }

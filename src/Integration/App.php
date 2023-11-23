@@ -4,6 +4,8 @@ namespace Tuples\Integration;
 
 use Tuples\Container\Container;
 use Tuples\Database\{Database, DatabasePool};
+use Tuples\Exception\Contracts\ExceptionHandler;
+use Tuples\Exception\DefaultExceptionHandler;
 use Tuples\Http\{Request, Response, Route, RouteGroup, Router};
 use Tuples\Utils\PhpBootstrapper;
 
@@ -46,6 +48,20 @@ class App
         $this->container = Container::instance();
 
         $this->registerRouter();
+
+        $this->callable(Resolver::class, Resolver::class);
+
+        // Default Exception Handler
+        $this->useExceptionHandler(DefaultExceptionHandler::class);
+    }
+
+    public function useExceptionHandler(string $handler)
+    {
+        if (!class_exists($handler) || !is_subclass_of($handler, ExceptionHandler::class)) {
+            throw new \Error("Handler does not exist or does not extend \Tuples\Exception\Contracts\AbstractExceptionHandler.");
+        }
+        // Resolves the "ExceptionHandler" dependency each time it is invoked.
+        $this->callable("ExceptionHandler", $handler);
     }
 
     /**
@@ -137,22 +153,6 @@ class App
     }
 
     /**
-     * Resolve request on router and return response
-     *
-     * @return Response
-     */
-    private function resolve(): Response
-    {
-        $resolver = new Resolver(
-            $this->container->resolve(Router::class),
-            $this->container->resolve(Request::class),
-            $this->container->resolve(Response::class)
-        );
-
-        return $resolver->execute();
-    }
-
-    /**
      * standard-dying execution
      * The script executes the request and then die ⚰️ :(
      *
@@ -163,7 +163,9 @@ class App
         $this->registerRequestFromGlobals();
         $this->registerResponse();
 
-        $this->resolve()->emit();
+        /** @var Resolver $resolver */
+        $resolver = $this->container->resolve(Resolver::class);
+        $resolver->resolve()->emit();
     }
 
     /**
@@ -187,13 +189,18 @@ class App
                 $this->registerRequest($serverRequest);
                 $this->registerResponse();
 
-                $roadRunnerPsr7Worker->respond($this->resolve()->psr());
+                /** @var Resolver $resolver */
+                $resolver = $this->container->resolve(Resolver::class);
+                $response = $resolver->resolve()->psr();
+
+                $roadRunnerPsr7Worker->respond($response);
 
                 $this->container->unbind(Request::class);
                 $this->container->unbind(Response::class);
 
                 gc_collect_cycles();
             } catch (\Throwable $th) {
+                // RoadRunner Worker Exception. Never happen, but...
                 $roadRunnerPsr7Worker->respond(new \Nyholm\Psr7\Response(500, [], $th->getMessage()));
             }
         }
@@ -260,8 +267,6 @@ class App
     private function registerRequest(\Psr\Http\Message\ServerRequestInterface $serverRequest): void
     {
         $request = new Request($serverRequest);
-        // this is a worker-context request, use ephemeral container to share dependencies inside the request lifecycle
-        $request->useEphemeralContainer();
         $this->singleton(Request::class, $request);
     }
 

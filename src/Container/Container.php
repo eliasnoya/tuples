@@ -2,7 +2,7 @@
 
 namespace Tuples\Container;
 
-use Tuples\Container\Contracts\AbstractContainer;
+use Tuples\Container\Contracts\Container as AbstractContainer;
 
 /**
  * Singleton Depedency Container
