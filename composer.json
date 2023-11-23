@@ -20,7 +20,8 @@
     ]
   },
   "scripts": {
-    "localserve": "php -S localhost:8000 -t public"
+    "localserve": "php -S localhost:8000 -t public",
+    "get-roadrunner": "./vendor/bin/rr get-binary"
   },
   "require": {
     "php": ">=8.1.0",
