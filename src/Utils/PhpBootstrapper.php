@@ -13,7 +13,7 @@ class PhpBootstrapper
     public function __construct()
     {
         // run only once & check if project path is correct
-        if (!file_exists(basePath()) || !is_dir(basePath()) || !file_exists(basePath("/bootstraped.keep"))) {
+        if (!file_exists(basePath()) || !is_dir(basePath())) {
             throw new \Error("Invalid project base Path");
         }
     }

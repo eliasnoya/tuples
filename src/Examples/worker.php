@@ -1,15 +1,21 @@
 <?php
 
+use Tuples\Integration\App;
+
 require_once 'vendor/autoload.php';
 
 /**
- *
  * Initializes the App, this one is designed for roadrunner Worker.
  * It creates an instance of Container along with Tuples\Request and Tuples\Response during startup.
  */
-$app = app(); // no basepath -> store at project root
+$app = new App();
+
+// Setup default configuration, enviorment (with dotenv to) and dependencies
+// Depedenencies: Router, RouteResolver, Request, Response, ExceptionHandler
+$app->defaults();
 
 $app->use(\Tuples\Http\Middleware\Cors::class);
+$app->use(\Tuples\Http\Middleware\Helmet::class);
 
 // Utilize Tuples\DatabasePool and bind the default connection to the container
 $app->useDefaultDatabase(env('DEFAULT_DB_DSN'), env('DEFAULT_DB_USER'), env('DEFAULT_DB_PASS'));
