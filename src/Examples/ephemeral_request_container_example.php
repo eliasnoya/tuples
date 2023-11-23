@@ -27,13 +27,13 @@ class Controller extends BaseController
     public function index(Request $request)
     {
         // if this is set on a middleware will live in entire request
-        $request->container()->singleton(Tenant::class, Tenant::class);
-        $request->container()->singleton(User::class, User::class);
+        $request->singleton(Tenant::class, Tenant::class);
+        $request->singleton(User::class, User::class);
 
         return [
             'must exists both',
-            $request->container()->resolve(Tenant::class),
-            $request->container()->resolve(User::class),
+            $request->resolve(Tenant::class),
+            $request->resolve(User::class),
         ];
     }
 
@@ -42,8 +42,8 @@ class Controller extends BaseController
         // hint first index and then index2, the dependency doesnt exists anymore
         return [
             'must not exists',
-            $request->container()->resolve(Tenant::class),
-            $request->container()->resolve(User::class),
+            $request->resolve(Tenant::class),
+            $request->resolve(User::class),
         ];
     }
 }

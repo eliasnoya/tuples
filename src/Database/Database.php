@@ -2,6 +2,14 @@
 
 namespace Tuples\Database;
 
+/**
+ * Simple PDO wrapper designed for projects that require basic database operations without extensive code management.
+ * Provides a basic insert/update/delete/select builder compatible with major relational database management systems (RDBMS).
+ * Use the query(...) method for more complex and RDBMS-specific statements.
+ *
+ * This "module" (\Tuples\Database) is not intended to reinvent the wheel. For more comprehensive database management, ORM, or ActiveRecord capabilities,
+ * consider using tools like Doctrine and registering them with the App container to share across your application.
+ */
 class Database
 {
     public function __construct(private \PDO $pdo)
@@ -88,7 +96,9 @@ class Database
      */
     public function update(string $table, array $where, array $values): int
     {
-        $wheres = castAsMultidimensional($where);
+        // cast allways as multidimensional array
+        $wheres = isset($where[0]) && is_array($where[0]) ? $where : [$where];
+
         $parameters = [];
         $sets = [];
         $whereArray = [];
@@ -174,7 +184,9 @@ class Database
         $parameters = [];
         $whereArray = [];
 
-        $wheres = castAsMultidimensional($where);
+        // cast allways as multidimensional array
+        $wheres = isset($where[0]) && is_array($where[0]) ? $where : [$where];
+
         foreach ($wheres as $where) {
             list($column, $value, $operator) = $where;
             $auxComparation = empty($operator) ? "=" : $operator;

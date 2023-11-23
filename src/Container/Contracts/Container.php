@@ -19,6 +19,8 @@ abstract class Container
      */
     private array $dependencies;
 
+
+
     public function exists(string $name): bool
     {
         return isset($this->dependencies[$name]);
@@ -29,10 +31,10 @@ abstract class Container
      *
      * @param string $name
      * @param mixed $concrete
-     * @param DependencyType $type
+     * @param string $type
      * @return void
      */
-    private function bind(string $name, mixed $concrete, DependencyType $type): void
+    private function bind(string $name, mixed $concrete, string $type): void
     {
         $this->dependencies[$name] = new Dependency($name, $concrete, $type);
     }
@@ -63,7 +65,7 @@ abstract class Container
      */
     public function singleton(string $name, mixed $concrete): void
     {
-        $this->bind($name, $concrete, DependencyType::SINGLETON);
+        $this->bind($name, $concrete, "singleton");
     }
 
     /**
@@ -76,7 +78,30 @@ abstract class Container
      */
     public function callable(string $name, mixed $concrete): void
     {
-        $this->bind($name, $concrete, DependencyType::INSTANCEABLE);
+        $this->bind($name, $concrete, "callable");
+    }
+
+    /**
+     * Register depedencies from array
+     * The structure of the array must be:
+     * [
+     *  ['DependencyName', 'DepedencyConcrete', 'DependencyType']
+     * ]
+     *
+     * @param array $dependencies
+     * @return void
+     * @throws \InvalidArgumentException if some parameter is invalid for Dependency constructor
+     */
+    public function bindDependencies(array $dependencies): void
+    {
+        foreach ($dependencies as $depedency) {
+            list($name, $concrete, $type) = $depedency;
+
+            // default type = singleton
+            $type = empty($type) ? 'singleton' : $type;
+
+            $this->bind($name, $concrete, $type);
+        }
     }
 
     /**

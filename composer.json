@@ -1,4 +1,16 @@
 {
+  "name": "eliasnoya/tuples-framework",
+  "description": "Lightweight PHP framework optimized for minimal resource consumption, specifically designed for seamless integration with the RoadRunner HTTP Server.",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Elias Noya",
+      "email": "eliasnoya@gmail.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "version": "1.0.0",
   "autoload": {
     "psr-4": {
       "Tuples\\": "src/"
@@ -7,13 +19,16 @@
       "src/Helpers.php"
     ]
   },
+  "scripts": {
+    "localserve": "php -S localhost:8000 -t public"
+  },
   "require": {
+    "php": ">=8.1.0",
     "nyholm/psr7-server": "1.1",
     "nyholm/psr7": "1.8",
     "vlucas/phpdotenv": "5.6",
     "spiral/roadrunner": "2023.3.0",
     "spiral/roadrunner-cli": "2.5",
-    "spiral/roadrunner-http": "3.2",
-    "monolog/monolog": "3.5"
+    "spiral/roadrunner-http": "3.2"
   }
 }

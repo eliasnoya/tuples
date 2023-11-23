@@ -3,6 +3,7 @@
 namespace Tuples\Integration;
 
 use Tuples\Container\Container;
+use Tuples\Container\Traits\HasContainer;
 use Tuples\Database\{Database, DatabasePool};
 use Tuples\Exception\Contracts\ExceptionHandler;
 use Tuples\Exception\DefaultExceptionHandler;
@@ -21,14 +22,14 @@ use Tuples\Utils\PhpBootstrapper;
  */
 class App
 {
-    /**
-     * The purpose of this container is to hold all the project depedencies
-     * @var Container
-     */
-    public Container $container;
+    use HasContainer;
 
     public function __construct(public string $basePath = "./")
     {
+        $this->bootContainer(Container::instance());
+
+        // Load base_path to ENVIORMENT for further use basePath() & storagePath() helpers
+        $_ENV['base_path'] = realpath($basePath);
     }
 
     /**
@@ -42,54 +43,23 @@ class App
         $this->useDotEnv();
 
         // Setup basic PHP configuration and directory structure
-        (new PhpBootstrapper($this->basePath))->boot();
-
-        // boot container unique instance
-        $this->container = Container::instance();
+        (new PhpBootstrapper())->boot();
 
         $this->registerRouter();
 
-        $this->callable(Resolver::class, Resolver::class);
+        $this->callable(RouteResolver::class, RouteResolver::class);
 
         // Default Exception Handler
-        $this->useExceptionHandler(DefaultExceptionHandler::class);
+        $this->registerExceptionHandler(DefaultExceptionHandler::class);
     }
 
-    public function useExceptionHandler(string $handler)
+    public function registerExceptionHandler(string $handler)
     {
         if (!class_exists($handler) || !is_subclass_of($handler, ExceptionHandler::class)) {
             throw new \Error("Handler does not exist or does not extend \Tuples\Exception\Contracts\AbstractExceptionHandler.");
         }
         // Resolves the "ExceptionHandler" dependency each time it is invoked.
         $this->callable("ExceptionHandler", $handler);
-    }
-
-    /**
-     * Bypass to Container
-     * Register SINGLETON dependency to Container
-     * The callable/object set in $concrete will be the same instance each time you call it
-     *
-     * @param string $name
-     * @param mixed $concrete
-     * @return void
-     */
-    public function singleton(string $name, mixed $concrete): void
-    {
-        $this->container->singleton($name, $concrete);
-    }
-
-    /**
-     * Bypass to Container
-     * Register CALLABLE dependency to Container
-     * The resolution set in $concrete (\Closure, Object) will generate a instance each time you call it
-     *
-     * @param string $name
-     * @param mixed $concrete
-     * @return void
-     */
-    public function callable(string $abstract, mixed $concrete): void
-    {
-        $this->container->callable($abstract, $concrete);
     }
 
     /**
@@ -103,6 +73,13 @@ class App
         $dotenv->load();
     }
 
+    public function useIf(bool $bool, string $middleware)
+    {
+        if ($bool) {
+            $this->use($middleware);
+        }
+    }
+
     /**
      * Add middleware to ROUTER so that he inherits the middlewares to Routes Groups and Routes
      *
@@ -112,7 +89,7 @@ class App
     public function use(string $middleware)
     {
         /** @var Router $router */
-        $router = $this->container->resolve(Router::class);
+        $router = $this->resolve(Router::class);
         $router->setMiddleware($middleware);
     }
 
@@ -148,7 +125,7 @@ class App
     private function useRoute(Route|RouteGroup|array $route)
     {
         /** @var Router $router */
-        $router = $this->container->resolve(Router::class);
+        $router = $this->resolve(Router::class);
         $router->add($route);
     }
 
@@ -163,9 +140,9 @@ class App
         $this->registerRequestFromGlobals();
         $this->registerResponse();
 
-        /** @var Resolver $resolver */
-        $resolver = $this->container->resolve(Resolver::class);
-        $resolver->resolve()->emit();
+        /** @var RouteResolver $resolver */
+        $resolver = $this->resolve(RouteResolver::class);
+        $resolver->executeFromRequest()->emit();
     }
 
     /**
@@ -189,18 +166,18 @@ class App
                 $this->registerRequest($serverRequest);
                 $this->registerResponse();
 
-                /** @var Resolver $resolver */
-                $resolver = $this->container->resolve(Resolver::class);
-                $response = $resolver->resolve()->psr();
+                /** @var RouteResolver $resolver */
+                $resolver = $this->resolve(RouteResolver::class);
+                $response = $resolver->executeFromRequest()->psr();
 
                 $roadRunnerPsr7Worker->respond($response);
 
-                $this->container->unbind(Request::class);
-                $this->container->unbind(Response::class);
+                $this->unbind(Request::class);
+                $this->unbind(Response::class);
 
                 gc_collect_cycles();
             } catch (\Throwable $th) {
-                // RoadRunner Worker Exception. Never happen, but...
+                // RoadRunner Worker Exception. Never happen, but we are respecting his docs...
                 $roadRunnerPsr7Worker->respond(new \Nyholm\Psr7\Response(500, [], $th->getMessage()));
             }
         }
@@ -231,11 +208,11 @@ class App
      */
     public function useDatabase(string $connName, string $dsn, string $user, string|null $pass, array|null $opts = null): void
     {
-        $poolExists = $this->container->exists(DatabasePool::class);
+        $poolExists = $this->exists(DatabasePool::class);
 
         if (!$poolExists) {
             // Pool doesnt exists, create singleton with this as default connection
-            $this->container->singleton(DatabasePool::class, function () use ($dsn, $user, $pass, $opts) {
+            $this->singleton(DatabasePool::class, function () use ($dsn, $user, $pass, $opts) {
                 $pdo = new \PDO($dsn, $user, $pass, $opts);
                 $dbDefault = new Database($pdo);
                 return new DatabasePool($dbDefault);
@@ -243,7 +220,7 @@ class App
         } else {
             // Pool already exists add this connection to it
             /** @var DatabasePool $pool */
-            $pool = $this->container->resolve(DatabasePool::class);
+            $pool = $this->resolve(DatabasePool::class);
             $pool->add($connName, new Database(new \PDO($dsn, $user, $pass, $opts)));
         }
     }
@@ -266,8 +243,7 @@ class App
      */
     private function registerRequest(\Psr\Http\Message\ServerRequestInterface $serverRequest): void
     {
-        $request = new Request($serverRequest);
-        $this->singleton(Request::class, $request);
+        $this->singleton(Request::class, new Request($serverRequest));
     }
 
     /**

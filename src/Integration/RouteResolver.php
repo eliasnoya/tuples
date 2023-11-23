@@ -3,24 +3,47 @@
 namespace Tuples\Integration;
 
 use Tuples\Container\Container;
+use Tuples\Container\Traits\HasContainer;
 use Tuples\Exception\HttpNotFoundException;
 use Tuples\Http\Request;
 use Tuples\Http\Response;
 use Tuples\Http\Route;
+use Tuples\Http\Router;
 
 /**
- * Class to resolve the Request LifeCycle
+ * Class to resolve Router Action
  */
-class Resolver
+class RouteResolver
 {
-    protected Container $container;
+    use HasContainer;
 
-    public function __construct(protected Request $request, protected Response $response)
+    public function __construct(protected Router $router, protected Request $request, protected Response $response)
     {
-        $this->container = Container::instance();
+        $this->bootContainer(Container::instance());
     }
 
-    public function execute(Route|false $route, array $params = []): Response
+    /**
+     * Execute Route Action detecting it from Request
+     *
+     * @return Response
+     */
+    public function executeFromRequest(): Response
+    {
+        return $this->executeFromPath($this->request->method(), $this->request->path());
+    }
+
+    /**
+     * Execute Route Action detecting it from $method and $path
+     *
+     * @return Response
+     */
+    public function executeFromPath(string $method, string $path): Response
+    {
+        list($route, $params) = $this->router->lookup($method, $path);
+        return $this->execute($route, $params);
+    }
+
+    private function execute(Route|false $route, array $params = []): Response
     {
         try {
             if (!$route) {
@@ -33,7 +56,7 @@ class Resolver
             list($controller, $method) = $route->getAction();
 
             // Register controller on Container as callabale (instance every time it is called)
-            $this->container->callable($controller, $controller);
+            $this->callable($controller, $controller);
 
             /************************************************************
             | Define the chain, route action + all middlewares
@@ -56,7 +79,7 @@ class Resolver
                 $middleware = $middlewares[$i];
 
                 // Register middleware on Container as callabale (instance every time it is called)
-                $this->container->callable($middleware, $middleware);
+                $this->callable($middleware, $middleware);
 
                 $next = function () use ($middleware, $next) {
                     return $this->handle($middleware, 'handle', ['next' => $next]);
@@ -74,30 +97,9 @@ class Resolver
             return $result;
         } catch (\Throwable $exception) {
             /** @var \Tuples\Exception\Contracts\ExceptionHandler $handler */
-            $handler = $this->container->resolve("ExceptionHandler", ["error" => $exception]);
+            $handler = $this->resolve("ExceptionHandler", ["error" => $exception]);
             return $handler->response();
         }
-    }
-
-    /**
-     * Execute Route Action detecting it from Request
-     *
-     * @return Response
-     */
-    public function resolve(): Response
-    {
-        return $this->resolvePath($this->request->method(), $this->request->path());
-    }
-
-    /**
-     * Execute Route Action detecting it from $method and $path
-     *
-     * @return Response
-     */
-    public function resolvePath(string $method, string $path): Response
-    {
-        list($route, $params) = router()->lookup($method, $path);
-        return $this->execute($route, $params);
     }
 
     /**
@@ -108,9 +110,9 @@ class Resolver
      * @param array $args
      * @return Response|\Closure
      */
-    private function handle(string $depedency, string $method, array $args): Response|\Closure
+    private function handle(string $name, string $method, array $args): Response|\Closure
     {
-        $value = $this->container->resolveAndExecute($depedency, $method, $args);
+        $value = $this->resolveAndExecute($name, $method, $args);
 
         // If it is a \Closure (next() function in the chain)
         // or if it is already a response, return it unmodified

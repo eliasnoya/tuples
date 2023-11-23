@@ -42,7 +42,7 @@ class DatabasePool
     public function get(string $name): Database
     {
         if (!isset($this->instances[$name])) {
-            throw new \Error("Database $name doesnt exists in pool");
+            throw new \InvalidArgumentException("Database $name doesnt exists in pool");
         }
 
         return $this->instances[$name];

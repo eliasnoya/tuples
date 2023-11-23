@@ -5,22 +5,16 @@ namespace Tuples\Utils;
 
 /**
  * Set of methods to prepare PHP and Directory Structure for the framework
- * Use once (new PhpBootstrapper('./'))->boot();
+ * Use once (new PhpBootstrapper())->boot();
+ * Note: base_path at enviorment must be set
  */
 class PhpBootstrapper
 {
-    public function __construct($projectBasePath)
+    public function __construct()
     {
-        // run only once
-        if (!file_exists(basePath("/bootstraped.keep"))) {
-
-            $path = realpath($projectBasePath);
-            if (!file_exists($path) && !is_dir($path)) {
-                throw new \Error("Invalid project base Path");
-            }
-
-            // Load base_path to ENVIORMENT for further use basePath() & storagePath() helpers
-            $_ENV['base_path'] = $path;
+        // run only once & check if project path is correct
+        if (!file_exists(basePath()) || !is_dir(basePath()) || !file_exists(basePath("/bootstraped.keep"))) {
+            throw new \Error("Invalid project base Path");
         }
     }
 

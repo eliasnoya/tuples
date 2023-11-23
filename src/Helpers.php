@@ -7,10 +7,10 @@ use Tuples\Http\Request;
 use Tuples\Http\Response;
 use Tuples\Http\Router;
 use Tuples\Integration\App;
-use Tuples\Integration\Resolver;
+use Tuples\Integration\RouteResolver;
 
 /**
- * Get container instance
+ * Get global-container instance
  *
  * @param mixed $abstract
  * @param array $arguments
@@ -84,6 +84,21 @@ function env(string $index, mixed $default = null): mixed
     return isset($_ENV[$index]) ? $_ENV[$index] : $default;
 }
 
+function isDev(): bool
+{
+    return env("ENVIORMENT") === 'dev';
+}
+
+function isProduction(): bool
+{
+    return env("ENVIORMENT") === 'production';
+}
+
+function isStage(): bool
+{
+    return env("ENVIORMENT") === 'stage';
+}
+
 /**
  * Base path of the project
  * @see Tuples\Integration\PhpBootstrapper to check initialization
@@ -109,24 +124,7 @@ function storagePath(string $path = ''): string
 }
 
 /**
- * Get Default APP-BOOTSTRAP
- *
- * @return App
- */
-function app(string $basePath = "./"): App
-{
-    $app = new App($basePath);
-
-    // Basic Settings with DotEnv, Router and minium php config with PhpBootstrapper
-    // You can Extends \Tuples\Integration\App and customize your own bootstrap.
-    // You must register \Tuples\Http\Router and ensure the existence of base_path and storage_path in $_ENV
-    $app->defaults();
-
-    return $app;
-}
-
-/**
- * Perform an internal redirection using the Route resolver without changing the URL or making an HTTP call.
+ * Perform an internal redirection using the Route resolver without changing the URL / making an HTTP call.
  * For HTTP location redirects, use response()->redirect(...).
  * If the destination route contains RouteParams in the $path, provide the values directly (e.g., /user/1, not /user/{id}).
  * You can pass manual input data to the destination route using the $inputs variable
@@ -140,22 +138,7 @@ function routeTo(string $path, string $method = "GET", array $inputs = []): Resp
 {
     request()->inputs()->merge($inputs);
 
-    /** @var Resolver $resolver */
-    $resolver = container()->resolve(Resolver::class);
-    return $resolver->resolvePath($method, $path);
-}
-
-function castAsMultidimensional(array $inputArray): array
-{
-    // If $inputArray is not an array, wrap it in another array
-    if (!is_array($inputArray)) {
-        $inputArray = [$inputArray];
-    }
-
-    // If $inputArray is a single-dimensional array, wrap it in another array
-    if (!is_array($inputArray[0])) {
-        $inputArray = [$inputArray];
-    }
-
-    return $inputArray;
+    /** @var RouteResolver $resolver */
+    $resolver = container()->resolve(RouteResolver::class);
+    return $resolver->executeFromPath($method, $path);
 }

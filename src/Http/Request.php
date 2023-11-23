@@ -5,8 +5,8 @@ namespace Tuples\Http;
 use InvalidArgumentException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
-use Tuples\Container\Contracts\Container as AbstractContainer;
 use Tuples\Container\EphemeralContainer;
+use Tuples\Container\Traits\HasContainer;
 use Tuples\Utils\KeyValue;
 
 /**
@@ -14,6 +14,8 @@ use Tuples\Utils\KeyValue;
  */
 class Request
 {
+    use HasContainer;
+
     // Query string parsed as KeyValue object
     private KeyValue $query;
 
@@ -30,9 +32,6 @@ class Request
 
     // The current requested route params=>value
     private KeyValue $routeParams;
-
-    // The request lifecycle container
-    private EphemeralContainer $container;
 
     /**
      * instance \Tuples\Http\Request with some PSR7 compliant library
@@ -55,7 +54,7 @@ class Request
         // \Psr\Http\Message\UploadedFileInterface[]
         $this->files = $serverRequest->getUploadedFiles();
 
-        $this->container = new EphemeralContainer;
+        $this->bootContainer(new EphemeralContainer);
     }
 
     /**
@@ -102,16 +101,6 @@ class Request
         $files = $this->files($index);
 
         return reset($files);
-    }
-
-    /**
-     * Get the Request Container
-     *
-     * @return AbstractContainer
-     */
-    public function container(): AbstractContainer
-    {
-        return $this->container;
     }
 
     /**

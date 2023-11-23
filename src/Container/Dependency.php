@@ -4,10 +4,16 @@ namespace Tuples\Container;
 
 class Dependency
 {
+    private const DEPENDENCY_TYPES = ["singleton", "callable"];
+
     private mixed $concrete;
 
-    public function __construct(private string $name, mixed $concrete, private DependencyType $type)
+    public function __construct(private string $name, mixed $concrete, private string $type)
     {
+        if (!in_array($type, self::DEPENDENCY_TYPES)) {
+            throw new \InvalidArgumentException("type $type is not a valid depedency type. Valids: " . implode(", ", self::DEPENDENCY_TYPES));
+        }
+
         if (!$concrete instanceof \Closure && !is_object($concrete) && !is_string($concrete)) {
             throw new \InvalidArgumentException("concrete must be a closure or object");
         }
@@ -32,10 +38,10 @@ class Dependency
 
     public function isSingleton(): bool
     {
-        return $this->type === DependencyType::SINGLETON;
+        return $this->type === 'singleton';
     }
 
-    public function getType(): DependencyType
+    public function getType(): string
     {
         return $this->type;
     }
