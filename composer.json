@@ -19,17 +19,6 @@
       "src/Helpers.php"
     ]
   },
-  "scripts": {
-    "create-project": "php -r \"copy('https://getcomposer.org/installer', 'composer-setup.php');\"",
-    "post-create-project-cmd": [
-      "php -r \"unlink('composer-setup.php');\"",
-      "composer install --no-dev",
-      "php -r \"copy('vendor/eliasnoya/tuples-framework/Examples/worker.php', './');\"",
-      "php -r \"copy('vendor/eliasnoya/tuples-framework/Examples/.env.example', './.env');\"",
-      "mkdir public",
-      "./vendor/bin/rr get-binary"
-    ]
-  },
   "require": {
     "php": ">=8.1.0",
     "nyholm/psr7-server": "1.1",

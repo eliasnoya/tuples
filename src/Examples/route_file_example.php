@@ -8,11 +8,9 @@ return [
 
     Route::get("/", [RestController::class, 'index']),
 
-    RouteGroup::prefix("/user")->add(function () {
-        return [
-            Route::get("/", [RestController::class, 'index']),
-            Route::get("/{name}", [RestController::class, 'hello'])
-        ];
-    }),
+    RouteGroup::prefix("/user")->add([
+        Route::get("/", [RestController::class, 'index']),
+        Route::get("/{name}", [RestController::class, 'hello'])
+    ]),
 
 ];
