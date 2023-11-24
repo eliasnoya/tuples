@@ -18,7 +18,8 @@ Tuples follows the philosophy of being minimally invasive, providing only the fu
 ## Create a Skeleton app with all the depedencies and RoadRunner Server
 
 ```bash
-composer create-project eliasnoya/tuples-project
+composer create-project eliasnoya/tuples-project myapp
+cd myapp
 # in Linux
 ./rr serve
 # In Windows
