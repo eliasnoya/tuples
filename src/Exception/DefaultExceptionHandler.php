@@ -20,26 +20,31 @@ class DefaultExceptionHandler extends ExceptionHandler
             return $this->error->response();
         }
 
-        // Non implemented ExceptionInterface, autogenerate response
-        $this->response->status($this->getHttpCode());
-
         // If request is json return json body
-        if ($this->request->expectJson()) {
+        if ($this->req->expectsJson()) {
             $body = [
                 'error' => true,
                 'message' => $this->error->getMessage(),
             ];
-            if (env("ENVIORMENT") == 'dev') {
+            if (isDev()) {
                 $body["trace"] = $this->error->getTrace();
             }
-
-            $this->response->isJson()->body($body);
+            $this->res->json($body);
+        } elseif ($this->req->expectHtml()) {
+            $template = view("errors/exception.html.twig", [
+                'code' => $this->getHttpCode(),
+                'message' => $this->error->getMessage(),
+                'trace' => $this->error->getTrace()
+            ]);
+            $this->res->body($template);
         } else {
             // Not Json, return text
-            $this->response->body("Error " . $this->getHttpCode() . ": " . $this->error->getMessage());
+            $body = "Error " . $this->getHttpCode() . ": " . $this->error->getMessage();
+            $this->res->body($body);
         }
+        $this->res->status($this->getHttpCode());
 
-        return $this->response;
+        return $this->res;
     }
 
     public function getHttpCode(): int

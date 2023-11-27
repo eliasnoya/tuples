@@ -19,6 +19,9 @@
       "src/Helpers.php"
     ]
   },
+  "scripts": {
+    "run-dev": "php -S localhost:8000 -t ./public/"
+  },
   "require": {
     "php": ">=8.1.0",
     "nyholm/psr7-server": "^1.1",
@@ -26,6 +29,7 @@
     "vlucas/phpdotenv": "^5.6",
     "spiral/roadrunner": "^2023.3.0",
     "spiral/roadrunner-cli": "^2.5",
-    "spiral/roadrunner-http": "^3.2"
+    "spiral/roadrunner-http": "^3.2",
+    "twig/twig": "^3.8"
   }
 }

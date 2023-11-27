@@ -9,6 +9,7 @@ use Tuples\Exception\Contracts\ExceptionHandler;
 use Tuples\Exception\DefaultExceptionHandler;
 use Tuples\Http\{Request, Response, Route, RouteGroup, Router};
 use Tuples\Utils\PhpBootstrapper;
+use Tuples\View\Twig;
 
 /**
  * Integrates configurations, containers, databases, HTTP router, and messaging to implement a lightweight API or web application.
@@ -32,6 +33,7 @@ class App
         $_ENV['base_path'] = realpath($basePath);
     }
 
+
     /**
      * Standard App bootstraping
      *
@@ -45,6 +47,8 @@ class App
         // Setup basic PHP configuration and directory structure
         (new PhpBootstrapper())->boot();
 
+        $this->useTwig();
+
         $this->registerRouter();
 
         $this->callable(RouteResolver::class, RouteResolver::class);
@@ -52,6 +56,66 @@ class App
         // Default Exception Handler
         $this->registerExceptionHandler(DefaultExceptionHandler::class);
     }
+
+    public function useTwig(string|null $viewPath = null, string|null $cachePath = null)
+    {
+        // load view path to enviorment
+        $this->setViewsPath(is_null($viewPath) ? basePath('/views') : $viewPath);
+
+        // default no cache
+        $twigCachePath = false;
+        // Cache only in Prod/Stage enviorment
+        if (!isDev()) {
+            // Set the absolute path defined or default
+            $twigCachePath = !$cachePath ? viewsPath('/compiled') : $cachePath;
+        }
+
+        /**
+         * Twig View Manager
+         *
+         * This class serves as the default implementation for rendering views using the Twig template engine.
+         * You can use any template engine by injecting "ViewManager" with your own implementation of
+         * \Tuples\View\Contracts\ViewManagerInterface (containing the render() method).
+         *
+         * In this default setting, we prepare the minimum configuration required for Twig.
+         *
+         * To add twig Extensions or some config add this lines on your worker file:
+         * container()->resolve("ViewManager")->getTwigEnviorment()->addExtension(...)
+         * container()->resolve("ViewManager")->getTwigEnviorment()->setCache(...)
+         * container()->resolve("ViewManager")->getTwigEnviorment()->setCharset(..)
+         *
+         * @see \Tuples\View\Contracts\ViewManagerInterface
+         */
+        $this->singleton("ViewManager", function () use ($twigCachePath) {
+            $twigFilesystemLoader = new \Twig\Loader\FilesystemLoader(viewsPath());
+            $twig = new \Twig\Environment($twigFilesystemLoader, [
+                'cache' => $twigCachePath,
+            ]);
+
+            return new Twig($twig);
+        });
+    }
+
+    /**
+     * Set views root path.
+     * sets views_path enviorment variable,
+     * used on \Tuples\View\View twig wrapper & view(...) helper
+     *
+     * @param string $viewPath (absolute path of directory)
+     * @return void
+     */
+    public function setViewsPath(string $viewPath): void
+    {
+        // ensure unix slashs for paths
+        $viewPath = str_replace('\\', '/', $viewPath);
+
+        if (!file_exists($viewPath) || !is_dir($viewPath)) {
+            throw new \InvalidArgumentException("path $viewPath doesnt exists");
+        }
+
+        $_ENV['views_path'] = realpath($viewPath);
+    }
+
 
     public function registerExceptionHandler(string $handler)
     {

@@ -162,16 +162,23 @@ class Request
         return $this->serverRequest->getHeaders();
     }
 
-    public function expectJson(): bool
+    public function expectsJson(): bool
     {
-        return $this->headerIs("accept", 'application/json');
+        return $this->headerEqual("Accept", 'application/json');
     }
 
-    public function headerIs(string $header, string $value): bool
+    public function expectHtml(): bool
+    {
+        return $this->headerEqual('Accept', 'text/html');
+    }
+
+    public function headerEqual(string $header, string $value): bool
     {
         foreach ($this->header($header) as $h) {
-            if (strtolower($h) === $value) {
-                return true;
+            foreach (explode(",", $h) as $hv) {
+                if (strtolower($hv) === strtolower($value)) {
+                    return true;
+                }
             }
         }
         return false;

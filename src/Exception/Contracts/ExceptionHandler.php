@@ -7,7 +7,7 @@ use Tuples\Http\Response;
 
 abstract class ExceptionHandler implements ExceptionInterface
 {
-    public function __construct(protected \Throwable|ExceptionInterface $error, protected Request $request, protected Response $response)
+    public function __construct(protected \Throwable|ExceptionInterface $error, protected Request $req, protected Response $res)
     {
     }
 }

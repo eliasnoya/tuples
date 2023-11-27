@@ -6,7 +6,6 @@ use Tuples\Database\DatabasePool;
 use Tuples\Http\Request;
 use Tuples\Http\Response;
 use Tuples\Http\Router;
-use Tuples\Integration\App;
 use Tuples\Integration\RouteResolver;
 
 /**
@@ -121,6 +120,30 @@ function basePath(string $path = ''): string
 function storagePath(string $path = ''): string
 {
     return basePath('/storage' . $path);
+}
+
+/**
+ * Get the root path of view
+ *
+ * @return string
+ */
+function viewsPath(string $path = ''): string
+{
+    return env('views_path') . $path;
+}
+
+/**
+ * Shortcut to render view
+ *
+ * @param string $template
+ * @param array $data
+ * @return string
+ */
+function view(string $template, array $data = []): string
+{
+    /** @var \Tuples\View\Contracts\ViewManagerInterface $twig */
+    $viewManager = container()->resolve("ViewManager");
+    return $viewManager->render($template, $data);
 }
 
 /**

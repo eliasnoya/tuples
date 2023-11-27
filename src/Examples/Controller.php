@@ -13,10 +13,7 @@ class Controller extends BaseController
 
     public function page()
     {
-        return [
-            "I'am the page",
-            $this->req->query("hello"),
-            $this->req->input("Hello"),
-        ];
+        throw new \Error("test");
+        return view("test.html", ['content' => 'Hello world']);
     }
 }

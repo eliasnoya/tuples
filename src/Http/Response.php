@@ -69,6 +69,16 @@ class Response
         return $this;
     }
 
+    /**
+     * Matches the Content Type between the Request and the Response (self).
+     * If the response doesn't have a Content-Type header or $overwrite is set to true,
+     * it adds the Content-Type to the response equal to that of the Request;
+     * otherwise, it leaves the headers untouched.
+     *
+     * @param Request $request The Request object.
+     * @param bool $overwrite Flag to determine whether to overwrite the existing Content-Type header in the response.
+     * @return void
+     */
     public function matchRequestContent(Request $request, bool $overwrite = false)
     {
         $exists = $this->psr()->hasHeader('content-type');
@@ -86,9 +96,14 @@ class Response
         }
     }
 
-    public function isJson(): self
+    public function json(array $data, int $status = 200, array $headers = []): self
     {
-        return $this->header('Content-Type', 'application/json');
+        if (!empty($headers)) {
+            foreach ($headers as $header => $value) {
+                $this->header($header, $value);
+            }
+        }
+        return $this->header('Content-Type', 'application/json')->status($status)->body($data);
     }
 
     /**
@@ -117,7 +132,7 @@ class Response
     }
 
     /**
-     * Write response (only usefull on FPM/CGI implementations)
+     * Write response
      *
      * @return void
      */

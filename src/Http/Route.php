@@ -28,6 +28,12 @@ class Route
 
     public function __construct(string $path, string|array $action, array $methods = ["GET"])
     {
+        foreach ($methods as $method) {
+            if (!in_array($method, self::HTTP_METHODS)) {
+                throw new \InvalidArgumentException("method $method is invalid");
+            }
+        }
+
         $this->parsePath($path);
         $this->setMethods($methods);
         $this->setAction($action);
@@ -71,11 +77,12 @@ class Route
      * Set the path
      *
      * @param string $path
-     * @return void
+     * @return Route
      */
-    public function setPath(string $path)
+    public function setPath(string $path): Route
     {
         $this->parsePath($path);
+        return $this;
     }
 
     /**
@@ -83,7 +90,7 @@ class Route
      *
      * @return string
      */
-    public function getPath()
+    public function getPath(): string
     {
         return $this->path;
     }
@@ -143,9 +150,9 @@ class Route
      * Specify the action for this route
      *
      * @param string|array $action
-     * @return void
+     * @return Route
      */
-    private function setAction(string|array $action)
+    private function setAction(string|array $action): Route
     {
         // convert controller@action as array 0 class 1 method
         if (is_string($action)) {
@@ -168,6 +175,8 @@ class Route
         }
 
         $this->action = [$class, $method];
+
+        return $this;
     }
 
     /**
@@ -206,12 +215,27 @@ class Route
 
     public static function any(string $path, string|array $action)
     {
-        return new Route($path, $action, ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']);
+        return new Route($path, $action, self::HTTP_METHODS);
+    }
+
+    public static function delete(string $path, string|array $action)
+    {
+        return new Route($path, $action, ["DELETE"]);
     }
 
     public static function get(string $path, string|array $action)
     {
         return new Route($path, $action);
+    }
+
+    public static function head(string $path, string|array $action)
+    {
+        return new Route($path, $action, ["HEAD"]);
+    }
+
+    public static function options(string $path, string|array $action)
+    {
+        return new Route($path, $action, ["OPTIONS"]);
     }
 
     public static function patch(string $path, string|array $action)
@@ -227,15 +251,5 @@ class Route
     public static function put(string $path, string|array $action)
     {
         return new Route($path, $action, ["PUT"]);
-    }
-
-    public static function delete(string $path, string|array $action)
-    {
-        return new Route($path, $action, ["DELETE"]);
-    }
-
-    public static function options(string $path, string|array $action)
-    {
-        return new Route($path, $action, ["OPTIONS"]);
     }
 }

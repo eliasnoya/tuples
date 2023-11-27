@@ -54,6 +54,14 @@ class PhpBootstrapper
         if (!file_exists(storagePath('/logs'))) {
             mkdir(storagePath('/logs'));
         }
+
+        if (!file_exists(basePath('/views'))) {
+            mkdir(basePath('/views'));
+        }
+
+        if (!file_exists(basePath('/views/copiled'))) {
+            mkdir(basePath('/views/copiled'));
+        }
     }
 
     /**
