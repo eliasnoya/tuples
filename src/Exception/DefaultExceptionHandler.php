@@ -20,31 +20,41 @@ class DefaultExceptionHandler extends ExceptionHandler
             return $this->error->response();
         }
 
-        // If request is json return json body
-        if ($this->req->expectsJson()) {
-            $body = [
-                'error' => true,
-                'message' => $this->error->getMessage(),
-            ];
-            if (isDev()) {
-                $body["trace"] = $this->error->getTrace();
-            }
-            $this->res->json($body);
-        } elseif ($this->req->expectHtml()) {
-            $template = view("errors/exception.html.twig", [
-                'code' => $this->getHttpCode(),
-                'message' => $this->error->getMessage(),
-                'trace' => $this->error->getTrace()
-            ]);
-            $this->res->body($template);
-        } else {
-            // Not Json, return text
-            $body = "Error " . $this->getHttpCode() . ": " . $this->error->getMessage();
-            $this->res->body($body);
-        }
-        $this->res->status($this->getHttpCode());
+        // Prepare body according expectation
+        $body = match (true) {
+            $this->req->expectsJson() => $this->json(),
+            $this->req->expectHtml() => $this->html(),
+            default => $this->plain()
+        };
 
-        return $this->res;
+        return $this->res->body($body)->status($this->getHttpCode());
+    }
+
+    private function json(): array
+    {
+        $body = [
+            'error' => true,
+            'message' => $this->error->getMessage(),
+        ];
+        if (isDev()) {
+            $body["trace"] = $this->error->getTrace();
+        }
+
+        return $body;
+    }
+
+    private function html(): string
+    {
+        return view("errors.exception", [
+            'code' => $this->getHttpCode(),
+            'message' => $this->error->getMessage(),
+            'trace' => isDev() ? $this->error->getTrace() : false
+        ])->render();
+    }
+
+    private function plain(): string
+    {
+        return "Error " . $this->getHttpCode() . ": " . $this->error->getMessage();
     }
 
     public function getHttpCode(): int

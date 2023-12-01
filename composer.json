@@ -29,7 +29,9 @@
     "vlucas/phpdotenv": "^5.6",
     "spiral/roadrunner": "^2023.3.0",
     "spiral/roadrunner-cli": "^2.5",
-    "spiral/roadrunner-http": "^3.2",
-    "twig/twig": "^3.8"
+    "spiral/roadrunner-http": "^3.2"
+  },
+  "require-dev": {
+    "symfony/var-dumper": "^6.4"
   }
 }

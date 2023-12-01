@@ -13,7 +13,6 @@ class Controller extends BaseController
 
     public function page()
     {
-        throw new \Error("test");
-        return view("test.html", ['content' => 'Hello world']);
+        return view("test");
     }
 }

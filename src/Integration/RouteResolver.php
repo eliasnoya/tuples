@@ -9,6 +9,7 @@ use Tuples\Http\Request;
 use Tuples\Http\Response;
 use Tuples\Http\Route;
 use Tuples\Http\Router;
+use Tuples\View\Template;
 
 /**
  * Class to resolve Router Action
@@ -118,6 +119,12 @@ class RouteResolver
         // or if it is already a response, return it unmodified
         if ($value instanceof \Closure || $value instanceof Response) {
             return $value;
+        }
+
+        if ($value instanceof Template) {
+            $this->response->header("Content-Type", 'text/html');
+            // render de template to value
+            $value = $value->render();
         }
 
         // Otherwise, return the response instance with the result as the body

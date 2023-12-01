@@ -25,6 +25,8 @@ class App
 {
     use HasContainer;
 
+    protected bool $workerContext = false;
+
     public function __construct(public string $basePath = "./")
     {
         $this->bootContainer(Container::instance());
@@ -33,6 +35,10 @@ class App
         $_ENV['base_path'] = realpath($basePath);
     }
 
+    public function isWorker()
+    {
+        $this->workerContext = true;
+    }
 
     /**
      * Standard App bootstraping
@@ -47,7 +53,7 @@ class App
         // Setup basic PHP configuration and directory structure
         (new PhpBootstrapper())->boot();
 
-        $this->useTwig();
+        $this->setViewsPath();
 
         $this->registerRouter();
 
@@ -57,70 +63,33 @@ class App
         $this->registerExceptionHandler(DefaultExceptionHandler::class);
     }
 
-    public function useTwig(string|null $viewPath = null, string|null $cachePath = null)
-    {
-        // load view path to enviorment
-        $this->setViewsPath(is_null($viewPath) ? basePath('/views') : $viewPath);
-
-        // default no cache
-        $twigCachePath = false;
-        // Cache only in Prod/Stage enviorment
-        if (!isDev()) {
-            // Set the absolute path defined or default
-            $twigCachePath = !$cachePath ? viewsPath('/compiled') : $cachePath;
-        }
-
-        /**
-         * Twig View Manager
-         *
-         * This class serves as the default implementation for rendering views using the Twig template engine.
-         * You can use any template engine by injecting "ViewManager" with your own implementation of
-         * \Tuples\View\Contracts\ViewManagerInterface (containing the render() method).
-         *
-         * In this default setting, we prepare the minimum configuration required for Twig.
-         *
-         * To add twig Extensions or some config add this lines on your worker file:
-         * container()->resolve("ViewManager")->getTwigEnviorment()->addExtension(...)
-         * container()->resolve("ViewManager")->getTwigEnviorment()->setCache(...)
-         * container()->resolve("ViewManager")->getTwigEnviorment()->setCharset(..)
-         *
-         * @see \Tuples\View\Contracts\ViewManagerInterface
-         */
-        $this->singleton("ViewManager", function () use ($twigCachePath) {
-            $twigFilesystemLoader = new \Twig\Loader\FilesystemLoader(viewsPath());
-            $twig = new \Twig\Environment($twigFilesystemLoader, [
-                'cache' => $twigCachePath,
-            ]);
-
-            return new Twig($twig);
-        });
-    }
-
     /**
      * Set views root path.
      * sets views_path enviorment variable,
      * used on \Tuples\View\View twig wrapper & view(...) helper
      *
-     * @param string $viewPath (absolute path of directory)
+     * @param string|null $viewsPath (absolute path of directory)
      * @return void
      */
-    public function setViewsPath(string $viewPath): void
+    public function setViewsPath(string|null $viewsPath = null): void
     {
-        // ensure unix slashs for paths
-        $viewPath = str_replace('\\', '/', $viewPath);
+        $viewsPath = is_null($viewsPath) ? basePath('/views') : $viewsPath;
 
-        if (!file_exists($viewPath) || !is_dir($viewPath)) {
-            throw new \InvalidArgumentException("path $viewPath doesnt exists");
+        // ensure unix slashs for paths
+        $viewsPath = str_replace('\\', '/', $viewsPath);
+
+        if (!file_exists($viewsPath) || !is_dir($viewsPath)) {
+            throw new \InvalidArgumentException("path $viewsPath doesnt exists");
         }
 
-        $_ENV['views_path'] = realpath($viewPath);
+        $_ENV['views_path'] = realpath($viewsPath);
     }
 
 
     public function registerExceptionHandler(string $handler)
     {
         if (!class_exists($handler) || !is_subclass_of($handler, ExceptionHandler::class)) {
-            throw new \Error("Handler does not exist or does not extend \Tuples\Exception\Contracts\AbstractExceptionHandler.");
+            throw new \Error("Handler does not exist or does not extend \Tuples\Exception\Contracts\ExceptionHandler.");
         }
         // Resolves the "ExceptionHandler" dependency each time it is invoked.
         $this->callable("ExceptionHandler", $handler);
@@ -133,7 +102,7 @@ class App
      */
     public function useDotEnv()
     {
-        $dotenv = \Dotenv\Dotenv::createImmutable($this->basePath);
+        $dotenv = \Dotenv\Dotenv::createImmutable(basePath());
         $dotenv->load();
     }
 

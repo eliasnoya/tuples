@@ -7,6 +7,7 @@ use Tuples\Http\Request;
 use Tuples\Http\Response;
 use Tuples\Http\Router;
 use Tuples\Integration\RouteResolver;
+use Tuples\View\Template;
 
 /**
  * Get global-container instance
@@ -137,13 +138,26 @@ function viewsPath(string $path = ''): string
  *
  * @param string $template
  * @param array $data
- * @return string
+ * @return Template
  */
-function view(string $template, array $data = []): string
+function view(string $template, array $data = []): Template
 {
-    /** @var \Tuples\View\Contracts\ViewManagerInterface $twig */
-    $viewManager = container()->resolve("ViewManager");
-    return $viewManager->render($template, $data);
+    // support dot notation for folders
+    $template = str_replace('.', '/', ltrim($template, '/'));
+
+    // Add .php extension if not set
+    if (substr($template, -4) != '.php') {
+        $template .= '.php';
+    }
+
+    // Add basic dependencies to the template data
+    $data = array_merge($data, [
+        'req' => request(),
+        'db' => db(),
+        'public' => basePath('/public'),
+    ]);
+
+    return new Template(viewsPath("/$template"), $data);
 }
 
 /**

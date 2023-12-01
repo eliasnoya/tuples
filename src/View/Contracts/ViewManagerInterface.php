@@ -4,5 +4,6 @@ namespace Tuples\View\Contracts;
 
 interface ViewManagerInterface
 {
-    public function render(string $template, array $data = []): string;
+    public function prepare(string $template, array $data = []): ViewManagerInterface;
+    public function render(): string;
 }
